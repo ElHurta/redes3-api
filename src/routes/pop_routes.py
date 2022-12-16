@@ -1,5 +1,5 @@
 import re
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 import poplib
 
 pop_routes = Blueprint('pop_routes', __name__)
@@ -8,20 +8,24 @@ pop_routes = Blueprint('pop_routes', __name__)
 def pop():
     user = request.json.get('user')
     # Connect to the mail box 
-    Mailbox = poplib.POP3_SSL('redesmails.com', '995') 
-    Mailbox.user(user) 
-    Mailbox.pass_(request.json.get('password')) 
-    NumofMessages = len(Mailbox.list()[1])
-    messagesList = []
-    for i in range(NumofMessages):
-        fullMessage = "" 
-        for msg in Mailbox.retr(i+1)[1]:
-            # Serialize the message as json
-            fullMessage += msg.decode('utf-8') +"\n"
-        messagesList.append(email_to_json(fullMessage))
-            
-    Mailbox.quit()
-    return messagesList
+    try:
+        Mailbox = poplib.POP3_SSL('redesmails.com', '995') 
+        Mailbox.user(user) 
+        Mailbox.pass_(request.json.get('password')) 
+        NumofMessages = len(Mailbox.list()[1])
+        messagesList = []
+        for i in range(NumofMessages):
+            fullMessage = "" 
+            for msg in Mailbox.retr(i+1)[1]:
+                # Serialize the message as json
+                fullMessage += msg.decode('utf-8') +"\n"
+            messagesList.append(email_to_json(fullMessage))
+                
+        Mailbox.quit()
+        return messagesList
+
+    except:
+        return jsonify(message="POP3 failed"), 401
 
 @pop_routes.route('/login', methods=['POST'])
 def login():
@@ -32,9 +36,9 @@ def login():
         Mailbox.user(user) 
         Mailbox.pass_(request.json.get('password'))
         Mailbox.quit()
-        return "Login successful", 200
-    except:
-        return "Login failed", 401
+        return jsonify(message="Login success"), 200
+    except: 
+        return jsonify(message="Login failed"), 401
     
 
 def email_to_json(email_string):
